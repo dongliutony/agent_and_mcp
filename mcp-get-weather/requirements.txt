@@ -1,0 +1,21 @@
+# MCP 适配器
+langchain-mcp-adapters>=0.1.14
+mcp>=1.23.1
+
+# LangChain 相关
+langchain>=1.1.0
+langchain-openai>=1.1.0
+langgraph>=1.0.4
+langgraph-checkpoint>=2.1.0
+
+# OpenAI
+openai>=1.109.1
+
+# HTTP 客户端
+httpx>=0.28.1
+
+# 环境变量
+python-dotenv>=1.2.1
+
+# 其他依赖
+dotenv>=0.9.9

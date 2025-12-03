@@ -1,0 +1,11 @@
+langchain==1.1.0
+langchain-openai
+langchain-community==0.4.1
+python-dotenv
+langsmith
+pydantic
+matplotlib
+seaborn
+pandas
+IPython
+langgraph-checkpoint

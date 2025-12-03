@@ -1,0 +1,7 @@
+City,English Name,Temperature (°C),Condition,Humidity (%),Wind (kph)
+Beijing,Beijing,-7.8,Clear,67,14.0
+Shanghai,Shanghai,3.2,Clear,52,3.6
+San Francisco,San Francisco,16.7,Partly cloudy,38,11.9
+Los Angeles,Los Angeles,19.4,Sunny,47,5.8
+
+Data source: real-time weather queries
