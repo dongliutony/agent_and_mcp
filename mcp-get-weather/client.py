@@ -29,7 +29,7 @@ class Configuration:
         self.model = ChatOpenAI(model_name="gpt-5-mini", openai_api_key=self.api_key)
 
     @staticmethod
-    def loag_servers(file_path = "servers_config.json"):
+    def load_servers(file_path = "servers_config.json"):
         with open(file_path, "r", encoding="utf-8") as f:
             return json.load(f).get("mcpServers", {})
 
@@ -37,7 +37,7 @@ class Configuration:
 async def run_chat_loop():
     cfg = Configuration() 
     os.environ["OPENAI_API_KEY"] = cfg.api_key
-    servers_cfg = cfg.loag_servers() 
+    servers_cfg = cfg.load_servers() 
 
     # connect to MCP servers
     mcp_client = MultiServerMCPClient(servers_cfg)

@@ -1,0 +1,18 @@
+{
+    "mcpServers": {
+        "weather":{
+            "command": "python",
+            "args": ["weather_server.py"],
+            "transport": "stdio"
+        },
+        "filesystem":{
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-filesystem",
+                "/Users/dong/projects/langchain1/mcp-get-weather"
+            ],
+            "transport": "stdio"
+        }
+    }
+}
