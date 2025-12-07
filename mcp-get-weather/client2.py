@@ -11,7 +11,7 @@ from langchain_openai import ChatOpenAI
 from langchain_mcp_adapters.client import MultiServerMCPClient 
 from langgraph.checkpoint.memory import InMemorySaver
 
-
+from langgraph.graph import StateGraph
 """
 User open source tools: Filesystem MCP Server 
 """
@@ -54,7 +54,36 @@ async def run_chat_loop():
     problematic_tools = {"list_directory_with_sizes"}
     tools = [tool for tool in all_tools if tool.name not in problematic_tools]
     
-    print(f"Loaded {len(tools)} tools from MCP servers (filtered {len(all_tools) - len(tools)} problematic tools)") 
+    # Display loaded tools information
+    print("\n" + "="*60)
+    print("MCP 工具加载信息")
+    print("="*60)
+    print(f"总工具数: {len(all_tools)}")
+    print(f"可用工具数: {len(tools)}")
+    if len(all_tools) - len(tools) > 0:
+        print(f"已过滤工具数: {len(all_tools) - len(tools)}")
+        filtered_names = [tool.name for tool in all_tools if tool.name in problematic_tools]
+        print(f"已过滤工具: {', '.join(filtered_names)}")
+    
+    print("\n可用工具列表:")
+    print("-"*60)
+    for i, tool in enumerate(tools, 1):
+        tool_name = tool.name if hasattr(tool, 'name') else str(tool)
+        tool_desc = ""
+        if hasattr(tool, 'description') and tool.description:
+            tool_desc = tool.description
+        elif hasattr(tool, 'func') and hasattr(tool.func, '__doc__') and tool.func.__doc__:
+            tool_desc = tool.func.__doc__.strip().split('\n')[0]
+        
+        # Truncate description if too long
+        if tool_desc and len(tool_desc) > 80:
+            tool_desc = tool_desc[:77] + "..."
+        
+        print(f"  {i}. {tool_name}")
+        if tool_desc:
+            print(f"     描述: {tool_desc}")
+    
+    print("="*60 + "\n") 
 
     # init LLM model
     model = cfg.model 
