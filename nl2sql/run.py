@@ -1,6 +1,41 @@
 import uuid
+import threading
+import sys
 from langchain_core.messages import HumanMessage, AIMessage
 from nl2sql import create_nl2sql_agent
+
+class LoadingIndicator:
+    """加载指示器类，显示旋转动画"""
+    def __init__(self, message="思考中"):
+        self.message = message
+        self.spinner_chars = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+        self.running = False
+        self.thread = None
+    
+    def _animate(self):
+        """动画循环"""
+        i = 0
+        while self.running:
+            char = self.spinner_chars[i % len(self.spinner_chars)]
+            sys.stdout.write(f'\r{char} {self.message}...')
+            sys.stdout.flush()
+            i += 1
+            import time
+            time.sleep(0.1)
+    
+    def start(self):
+        """开始显示动画"""
+        self.running = True
+        self.thread = threading.Thread(target=self._animate, daemon=True)
+        self.thread.start()
+    
+    def stop(self):
+        """停止显示动画"""
+        self.running = False
+        if self.thread:
+            self.thread.join(timeout=0.5)
+        sys.stdout.write('\r' + ' ' * (len(self.message) + 10) + '\r')
+        sys.stdout.flush()
 
 def main():
     """控制台多轮对话主函数"""
@@ -39,13 +74,21 @@ def main():
         
         # 调用 agent 处理用户输入
         try:
-            print("\nAI: ", end="", flush=True)
+            # 显示加载指示器
+            loader = LoadingIndicator("AI正在思考")
+            loader.start()
             
-            # 使用 agent.invoke() 一次性获取完整响应
-            result = agent.invoke(
-                {"messages": [HumanMessage(content=user_input)]},
-                config
-            )
+            try:
+                # 使用 agent.invoke() 一次性获取完整响应
+                result = agent.invoke(
+                    {"messages": [HumanMessage(content=user_input)]},
+                    config
+                )
+            finally:
+                # 停止加载指示器
+                loader.stop()
+            
+            print("\nAI: ", end="", flush=True)
             
             # 获取最新的 AI 消息
             if result and "messages" in result and len(result["messages"]) > 0:
