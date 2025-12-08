@@ -8,7 +8,7 @@ from langchain.agents.middleware import HumanInTheLoopMiddleware
 from langchain_openai import ChatOpenAI
 
 from langgraph.checkpoint.memory import InMemorySaver
-from langgraph.types import Command
+# from langgraph.types import Command
 
 from langchain_community.utilities import SQLDatabase
 from langchain_community.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
@@ -61,11 +61,20 @@ def create_nl2sql_agent(verbose=False):
         prompt_content = prompt_content.strip()
         # 替换占位符
         system_prompt = prompt_content.replace("{db.dialect}", db.dialect)
-        system_prompt = system_prompt.replace("{}', '.join(db.get_usable_table_names())}", "', '".join(db.get_usable_table_names()))
+        system_prompt = system_prompt.replace(
+            "{', '.join(db.get_usable_table_names())}", 
+            "', '".join(db.get_usable_table_names())
+            )
         system_prompt = system_prompt.replace("{5}", "5")
     else:
         # 如果文件不存在，使用默认提示
         system_prompt = "你是一个专业的SQL数据分析Agent。"
+
+    # HITL 中间件
+    hitl = HumanInTheLoopMiddleware(
+        interrupt_on={"sql_db_query": True},
+        description_prefix="⚠️ SQL执行需要人工审批"
+    )
 
     # 创建 Agent（控制台环境，自动执行 SQL，不需要人工审批）
     agent = create_agent(
@@ -73,12 +82,7 @@ def create_nl2sql_agent(verbose=False):
         tools=tools,
         system_prompt=system_prompt,
         # 注释掉 HumanInTheLoopMiddleware，让 SQL 自动执行
-        # middleware=[
-        #     HumanInTheLoopMiddleware(
-        #         interrupt_on={"sql_db_query": True},
-        #         description_prefix="⚠️ SQL执行需要人工审批"
-        #     )
-        # ],
+        middleware=[hitl],
         checkpointer=InMemorySaver(), 
     )
     

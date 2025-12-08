@@ -1,8 +1,22 @@
 import uuid
 import threading
 import sys
+import time
+
 from langchain_core.messages import HumanMessage, AIMessage
+from langgraph.types import Command
+
 from nl2sql import create_nl2sql_agent
+
+
+def typewriter_print(text: str, delay: float = 0.02):
+    for char in text:
+        sys.stdout.write(char)
+        sys.stdout.flush()
+        time.sleep(delay)
+    sys.stdout.write('\n')
+    sys.stdout.flush()
+
 
 class LoadingIndicator:
     """加载指示器类，显示旋转动画"""
@@ -36,6 +50,54 @@ class LoadingIndicator:
             self.thread.join(timeout=0.5)
         sys.stdout.write('\r' + ' ' * (len(self.message) + 10) + '\r')
         sys.stdout.flush()
+
+
+def handle_hitl_if_needed(agent, result, config):
+    """
+    如果 result 中包含 HITL 中断 (__interrupt__),
+    则在 console 中交互式让用户 approve/reject, 并返回 resume 后的最终 result
+    """
+    if not (isinstance(result, dict) and result.get("__interrupt__")):
+        return result 
+    
+    interrupt = result["__interrupt__"][0].value
+    action_requests = interrupt["action_requests"]
+    review_configs = interrupt["review_configs"]
+
+    config_map = {cfg["action_name"]: cfg for cfg in review_configs}
+    decisions = []
+
+    print(f"\n\n=== 检测到需要人工审批的 SQL 查询，请选择操作: ===")
+    for idx, action in enumerate(action_requests, start=1):
+        name = action["name"]
+        args = action["args"]
+        review_cfg = config_map.get(name, {})
+        allowed = review_cfg.get("allowed_decisions", ["approve", "reject", "edit"])
+
+        print(f"\n[{idx}] 工具: {name}")
+        print(f"  参数: {args}")
+        print(f"  允许的操作: {', '.join(allowed)}")
+        
+
+        while True:
+            choice = input(f"    是否执行该 SQL? (a=执行， r=拒绝) ").strip().lower()
+            if choice in ("a", "r"):
+                break
+            print("    无效输入，请输入 a 或 r")
+
+        if choice == "a":
+            decisions.append({"type": "approve"})
+        else:
+            decisions.append({"type": "reject"})
+
+    print(f"\n\n=== 人工审批完成，开始执行 SQL 查询: ===")
+
+    resumed_result = agent.invoke(
+        Command(resume={"decisions": decisions}),
+        config=config
+    )
+
+    return resumed_result
 
 def main():
     """控制台多轮对话主函数"""
@@ -87,6 +149,8 @@ def main():
             finally:
                 # 停止加载指示器
                 loader.stop()
+
+            result = handle_hitl_if_needed(agent, result, config)
             
             print("\nAI: ", end="", flush=True)
             
@@ -106,7 +170,7 @@ def main():
                     content = last_message.content
                     # 处理不同类型的 content
                     if isinstance(content, str):
-                        print(content)
+                        final_text = content
                     elif isinstance(content, list):
                         # 处理内容块列表
                         text_parts = []
@@ -115,9 +179,10 @@ def main():
                                 text_parts.append(str(item.get("text", "")))
                             else:
                                 text_parts.append(str(item))
-                        print("".join(text_parts))
+                        final_text = "".join(text_parts)
                     else:
-                        print(str(content))
+                        final_text = str(content)
+                    typewriter_print(final_text)
                 else:
                     print("抱歉，没有收到有效响应。")
             else:
